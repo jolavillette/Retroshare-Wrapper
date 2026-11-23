@@ -2678,7 +2678,28 @@ Future<(List<Identity>, List<Identity>, List<Identity>)> getAllIdentities(
         idsInfo[i]['mMeta']['mSubscribeFlags'] != 7) {
       // get the  contact IDs and Unknown Ids
       // Use Dart record type (Identity, bool) instead of Tuple2
-      final knownIden = await getKnownIdentity(idsInfo[i], authToken);
+      // At start the core may not have a contact's details yet (its identity
+      // cache is still loading): list it from the summary rather than fail
+      // the whole list.
+      (Identity, bool) knownIden;
+      try {
+        knownIden = await getKnownIdentity(idsInfo[i], authToken);
+      } catch (e) {
+        print('getAllIdentities: no details yet for contact '
+            '${idsInfo[i]['mMeta']['mGroupId']}: $e');
+        final pgpId = idsInfo[i]['mPgpId'];
+        knownIden = (
+          Identity(
+            mId: idsInfo[i]['mMeta']['mGroupId'],
+            signed: pgpId != null && pgpId != '0000000000000000',
+            pgpId: pgpId,
+            name: idsInfo[i]['mMeta']['mGroupName'],
+            isContact: true,
+            originator: idsInfo[i]['mMeta']['mOriginator'],
+          ),
+          false,
+        );
+      }
       // Access elements using $1, $2 etc. for unnamed records
       if (knownIden.$2) {
         signedContactIds.add(knownIden.$1);
