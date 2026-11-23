@@ -82,12 +82,21 @@ Future<bool> isRetroshareRunning() async {
 class RsEvents {
   static Map<RsEventType, StreamSubscription<String>>? rsEventsSubscriptions;
 
+  /// One number per event type, bumped by every [registerEventsHandler] call.
+  /// A stream that ends listens again only while the number it was started
+  /// with is still the current one, so a newer registration replaces it.
+  static final Map<RsEventType, int> _registrations = {};
+
   /// Register Event
   ///
   /// Where [eventType] is the enum type [RsEventType] that specifies what kind
   /// of event are we listening to.
   ///
   /// The callback return this StreamSubscription object and the Json response
+  ///
+  /// When the stream ends, because the core stopped or restarted, the handler
+  /// is registered again with the same callback as soon as the JSON API
+  /// answers. A new registration for the same [eventType] cancels this one.
   static Future<StreamSubscription<String>?> registerEventsHandler(
     RsEventType eventType,
     Function callback,
@@ -95,8 +104,21 @@ class RsEvents {
     required Function? onError,
     String? basicAuth,
   }) async {
-    await restartRSIfDown();
+    final registration = (_registrations[eventType] ?? 0) + 1;
+    _registrations[eventType] = registration;
+    await rsEventsSubscriptions?[eventType]?.cancel();
 
+    await restartRSIfDown();
+    return _listen(eventType, callback, authToken, onError, registration);
+  }
+
+  static Future<StreamSubscription<String>?> _listen(
+    RsEventType eventType,
+    Function callback,
+    AuthToken? authToken,
+    Function? onError,
+    int registration,
+  ) async {
     final body = {'eventType': eventType.value};
     const path = '/rsEvents/registerEventsHandler';
     final reqUrl = getRetroshareServicePrefix() + path;
@@ -118,6 +140,24 @@ class RsEvents {
       final response = await client.send(request);
 
       if (response.statusCode == 200) {
+        var ended = false;
+        void streamEnded() {
+          if (ended) return;
+          ended = true;
+          client?.close();
+          if (_registrations[eventType] == registration) {
+            unawaited(
+              _listenAgain(
+                eventType,
+                callback,
+                authToken,
+                onError,
+                registration,
+              ),
+            );
+          }
+        }
+
         streamSubscription = response.stream
             .transform(utf8.decoder) // Decode bytes to UTF-8 string
             .transform(const LineSplitter()) // Split stream into lines
@@ -145,11 +185,11 @@ class RsEvents {
             if (onError != null) {
               onError(error, stackTrace);
             }
-            client?.close(); // Close the client on stream error
+            streamEnded();
           })
           ..onDone(() {
             print('SSE Stream Closed');
-            client?.close(); // Close the client when the stream is done
+            streamEnded();
           });
       } else {
         // Handle non-200 status code
@@ -190,6 +230,39 @@ class RsEvents {
       // This might happen if connection failed before the stream was established
     }
     return streamSubscription;
+  }
+
+  /// Listen again once the JSON API answers, every 2 s at first, then up to a
+  /// minute apart. It does not start the service itself: the app does that
+  /// when it comes back to the foreground. Network errors are retried; any
+  /// other error, such as a refused authentication, ends the loop.
+  static Future<void> _listenAgain(
+    RsEventType eventType,
+    Function callback,
+    AuthToken? authToken,
+    Function? onError,
+    int registration,
+  ) async {
+    const maxDelay = Duration(seconds: 60);
+    var delay = const Duration(seconds: 2);
+    while (_registrations[eventType] == registration) {
+      await Future<void>.delayed(delay);
+      if (_registrations[eventType] != registration) return;
+      delay = delay * 2 > maxDelay ? maxDelay : delay * 2;
+      if (!await isRetroshareRunning()) continue;
+      try {
+        await _listen(eventType, callback, authToken, onError, registration);
+        print('RsEvents: listening again to $eventType');
+        return;
+      } on SocketException catch (_) {
+        continue;
+      } on http.ClientException catch (_) {
+        continue;
+      } catch (e) {
+        print('RsEvents: not listening again to $eventType: $e');
+        return;
+      }
+    }
   }
 }
 
