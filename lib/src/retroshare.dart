@@ -259,6 +259,20 @@ Future<Map<String, dynamic>> rsApiCall(
   AuthToken? authToken,
   Map<String, dynamic>? params,
   http.Client? client,
+}) => _rsApiCall(
+  path,
+  authToken: authToken,
+  params: params,
+  client: client,
+  retryIfDown: true,
+);
+
+Future<Map<String, dynamic>> _rsApiCall(
+  String path, {
+  AuthToken? authToken,
+  Map<String, dynamic>? params,
+  http.Client? client,
+  required bool retryIfDown,
 }) async {
   final httpClient = client ?? http.Client();
   try {
@@ -292,11 +306,14 @@ Future<Map<String, dynamic>> rsApiCall(
       );
     }
   } on SocketException {
-    if (client == null && await restartRSIfDown()) {
-      return rsApiCall(
+    // One retry after (re)starting the service, then give up: retrying on
+    // every failure looped forever while the service could not be started.
+    if (client == null && retryIfDown && await restartRSIfDown()) {
+      return _rsApiCall(
         path,
         params: params,
         authToken: authToken,
+        retryIfDown: false,
       ); // No client passed on retry
     } else {
       throw SocketException(
