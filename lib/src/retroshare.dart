@@ -718,8 +718,7 @@ class RsIdentity {
       params: {'id': identity.mId},
     );
     final retval = response['retval'];
-    final bool success = (retval is bool && retval) || (retval is int && retval == 1);
-    return !success; // Based on original logic
+    return (retval is bool && retval) || (retval is int && retval == 1);
   }
 }
 
