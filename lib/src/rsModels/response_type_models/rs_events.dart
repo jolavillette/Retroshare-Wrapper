@@ -1,66 +1,73 @@
 // ignore_for_file: constant_identifier_names
 
+/// The event types of libretroshare (RsEventType in retroshare/rsevents.h).
+///
+/// [value] is the number the JSON API expects. The lib numbers its event
+/// types from 1 (0 is its internal __NONE), so the Dart [index] is not the
+/// lib value and must never be sent.
 enum RsEventType {
-  /// @see RsBroadcastDiscovery = 1,
-  BROADCAST_DISCOVERY,
+  /// @see RsBroadcastDiscovery
+  BROADCAST_DISCOVERY(1),
 
-  /// @see RsDiscPendingPgpReceivedEvent = 2,
-  GOSSIP_DISCOVERY,
+  /// @see RsDiscPendingPgpReceivedEvent
+  GOSSIP_DISCOVERY(2),
 
-  /// @see AuthSSL = 3,
-  AUTHSSL_CONNECTION_AUTENTICATION,
+  /// @see AuthSSL
+  AUTHSSL_CONNECTION_AUTENTICATION(3),
 
-  /// @see pqissl  = 4,
-  PEER_CONNECTION,
+  /// @see pqissl
+  PEER_CONNECTION(4),
 
-  /// @see RsGxsChanges, used also in @see RsGxsBroadcast  = 5,
-  GXS_CHANGES,
+  /// @see RsGxsChanges, used also in @see RsGxsBroadcast
+  GXS_CHANGES(5),
 
-  /// Emitted when a peer state changes, @see RsPeers  = 6,
-  PEER_STATE_CHANGED,
+  /// Emitted when a peer state changes, @see RsPeers
+  PEER_STATE_CHANGED(6),
 
-  /// @see RsMailStatusEvent = 7,
-  MAIL_STATUS,
+  /// @see RsMailStatusEvent
+  MAIL_STATUS(7),
 
-  /// @see RsGxsCircleEvent   = 8,
-  GXS_CIRCLES,
+  /// @see RsGxsCircleEvent
+  GXS_CIRCLES(8),
 
-  /// @see RsGxsChannelEvent = 9,
-  GXS_CHANNELS,
+  /// @see RsGxsChannelEvent
+  GXS_CHANNELS(9),
 
-  /// @see RsGxsForumEvent = 10,
-  GXS_FORUMS,
+  /// @see RsGxsForumEvent
+  GXS_FORUMS(10),
 
-  /// @see RsGxsPostedEvent  = 11,
-  GXS_POSTED,
+  /// @see RsGxsPostedEvent
+  GXS_POSTED(11),
 
-  /// @see RsGxsPostedEvent   = 12,
-  GXS_IDENTITY,
+  /// @see RsGxsIdentityEvent
+  GXS_IDENTITY(12),
 
-  /// @see RsFiles  = 13,
-  SHARED_DIRECTORIES,
+  /// @see RsFiles
+  SHARED_DIRECTORIES(13),
 
-  /// @see RsFiles  = 14,
-  FILE_TRANSFER,
+  /// @see RsFiles
+  FILE_TRANSFER(14),
 
-  /// @see RsMsgs    = 15,
-  CHAT_MESSAGE,
+  /// @see RsMsgs
+  CHAT_MESSAGE(15),
 
-  /// @see rspeers.h  = 16,
-  NETWORK,
+  /// @see rspeers.h
+  NETWORK(16),
 
-  /// @see rsfiles.h = 17
-  FILE_PERCEPTUAL_SEARCH_RESULT_RECEIVED,
+  /// @see rsfiles.h
+  FILE_PERCEPTUAL_SEARCH_RESULT_RECEIVED(17),
 
-  /// Following two events doesn't exists on RS code. Is needed because the event
-  /// FILE_HASHING_COMPLETED has the value 20, and Dart doesn't accept enums with
-  /// given values.
-  /// NOT USE = 18
-  VOID,
+  /// Not used by the lib under this name.
+  VOID(18),
 
-  /// NOT USE = 19
-  VOID_2,
+  /// Not used by the lib under this name.
+  VOID_2(19),
 
-  /// Emitted to update library clients about file hashing being completed = 20
-  FILE_HASHING_COMPLETED
+  /// Emitted to update library clients about file hashing being completed
+  FILE_HASHING_COMPLETED(20);
+
+  const RsEventType(this.value);
+
+  /// The RsEventType value in libretroshare.
+  final int value;
 }
