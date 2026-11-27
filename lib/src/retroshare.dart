@@ -97,7 +97,7 @@ class RsEvents {
   }) async {
     await restartRSIfDown();
 
-    final body = {'eventType': eventType.index};
+    final body = {'eventType': eventType.value};
     const path = '/rsEvents/registerEventsHandler';
     final reqUrl = getRetroshareServicePrefix() + path;
     StreamSubscription<String>? streamSubscription;
