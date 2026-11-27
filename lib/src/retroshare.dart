@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 import 'package:retroshare_api_wrapper/retroshare.dart';
@@ -1604,6 +1605,55 @@ class RsChats {
       authToken: authToken,
       params: {'status_string': statusString},
     );
+  }
+
+  static Uint8List? _imageBytes(Map<String, dynamic> response) {
+    if (response['retval'] != true) return null;
+    final base64String = response['avatar']?['mData']?['base64'];
+    if (base64String is! String || base64String.isEmpty) return null;
+    return base64Decode(base64String);
+  }
+
+  /// The avatar of the node [peerId], a JPEG or a PNG, or null when the core
+  /// has none: it then asks the node for it, so a later call may succeed.
+  static Future<Uint8List?> getAvatar(
+    String peerId,
+    AuthToken authToken,
+  ) async {
+    final response = await rsApiCall(
+      '/rsChats/getAvatar',
+      authToken: authToken,
+      params: {'pid': peerId},
+    );
+    return _imageBytes(response);
+  }
+
+  /// The avatar of our own node, or null when none is set.
+  static Future<Uint8List?> getOwnAvatar(AuthToken authToken) async {
+    final response = await rsApiCall(
+      '/rsChats/getOwnAvatar',
+      authToken: authToken,
+    );
+    return _imageBytes(response);
+  }
+
+  /// Sets the avatar of our own node, a JPEG or a PNG of at most 32767
+  /// bytes; an empty [image] removes it. Returns false when the core refused
+  /// the image.
+  static Future<bool> setOwnAvatar(
+    Uint8List image,
+    AuthToken authToken,
+  ) async {
+    final response = await rsApiCall(
+      '/rsChats/setOwnAvatar',
+      authToken: authToken,
+      params: {
+        'avatar': {
+          'mData': {'base64': base64Encode(image)},
+        },
+      },
+    );
+    return response['retval'] == true;
   }
 }
 
